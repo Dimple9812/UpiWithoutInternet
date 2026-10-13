@@ -1,0 +1,6 @@
+# Production-style profile: JSON (ECS) logs so the key/value fields we log
+# (packetHash, deviceId, bridge, reason, ...) are queryable in a log store.
+logging:
+  structured:
+    format:
+      console: ecs

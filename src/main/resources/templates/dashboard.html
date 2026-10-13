@@ -1,243 +1,419 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>UPI Offline Mesh — Demo</title>
-    <style>
-        * { box-sizing: border-box; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            margin: 0; padding: 24px; background: #0d1117; color: #e6edf3;
-        }
-        h1 { margin-top: 0; color: #f0f6fc; }
-        h2 { color: #58a6ff; border-bottom: 1px solid #30363d; padding-bottom: 4px; margin-top: 32px; }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .grid { display: grid; gap: 16px; }
-        .grid-2 { grid-template-columns: 1fr 1fr; }
-        .grid-3 { grid-template-columns: repeat(3, 1fr); }
-        .card {
-            background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 16px;
-        }
-        .device {
-            border: 1px solid #30363d; border-radius: 6px; padding: 12px; margin-bottom: 8px;
-            background: #0d1117;
-        }
-        .device.bridge { border-color: #2ea043; background: #052e16; }
-        .device.offline { opacity: 0.85; }
-        .badge {
-            display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px;
-            font-weight: 600; margin-left: 8px;
-        }
-        .badge-online { background: #2ea043; color: white; }
-        .badge-offline { background: #6e7681; color: white; }
-        .packet-id {
-            font-family: 'Consolas', 'Monaco', monospace; font-size: 11px;
-            background: #21262d; padding: 2px 6px; border-radius: 3px; margin: 2px;
-            display: inline-block;
-        }
-        button {
-            background: #238636; color: white; border: none; padding: 8px 16px;
-            border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;
-            margin: 4px;
-        }
-        button:hover { background: #2ea043; }
-        button.danger { background: #da3633; }
-        button.danger:hover { background: #f85149; }
-        button.secondary { background: #1f6feb; }
-        button.secondary:hover { background: #388bfd; }
-        input, select {
-            background: #0d1117; color: #e6edf3; border: 1px solid #30363d;
-            border-radius: 4px; padding: 6px 10px; font-size: 14px; margin: 4px;
-        }
-        table { width: 100%; border-collapse: collapse; font-size: 14px; }
-        th, td { text-align: left; padding: 8px; border-bottom: 1px solid #30363d; }
-        th { color: #8b949e; font-weight: 600; font-size: 12px; text-transform: uppercase; }
-        .status-SETTLED { color: #56d364; font-weight: 600; }
-        .status-REJECTED { color: #f85149; font-weight: 600; }
-        .status-DUPLICATE_DROPPED { color: #d29922; font-weight: 600; }
-        .status-INVALID { color: #f85149; font-weight: 600; }
-        #log {
-            background: #010409; color: #7ee787; padding: 12px; border-radius: 6px;
-            font-family: 'Consolas', 'Monaco', monospace; font-size: 12px;
-            max-height: 220px; overflow-y: auto; white-space: pre-wrap;
-            border: 1px solid #30363d;
-        }
-        .controls { background: #161b22; padding: 16px; border-radius: 8px;
-                    border: 1px solid #30363d; margin-bottom: 16px; }
-        .step-num {
-            display: inline-block; background: #58a6ff; color: white;
-            border-radius: 50%; width: 24px; height: 24px; text-align: center;
-            line-height: 24px; font-weight: 600; margin-right: 8px;
-        }
-        .balance { font-family: 'Consolas', monospace; color: #56d364; font-weight: 600; }
-        .small { font-size: 12px; color: #8b949e; }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MeshPay simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --paper: #EEF2F7; --panel: #FFFFFF; --ink: #172033; --muted: #5B6780; --line: #D5DCE7; --floor: #F7F9FC;
+  --signal: #2459D6; --coverage: #0E8F7E; --coverage-soft: rgba(14,143,126,.10);
+  --pending: #B87A0B; --reject: #C2413A; --attacker: #8A3FD1;
+  --radius-lg: 14px; --radius-sm: 8px; --on-signal: #FFFFFF;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0F1522; --panel: #161E2E; --ink: #E6EBF5; --muted: #95A1B8; --line: #2A3448; --floor: #121A29;
+    --signal: #6C9BFF; --coverage: #3CC4AE; --coverage-soft: rgba(60,196,174,.12);
+    --pending: #E3A93A; --reject: #F07B73; --attacker: #B98BF0; --on-signal: #0F1522;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink);
+  font: 15px/1.45 "Instrument Sans", system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+button, select, input { font: inherit; color: inherit; }
+.mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; }
+:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+
+header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; padding: 18px 24px;
+  border-bottom: 1px solid var(--line); background: var(--panel); }
+header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+header p { margin: 0; color: var(--muted); font-size: 14px; max-width: 60ch; }
+.controls { margin-left: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tick { min-width: 88px; text-align: right; color: var(--muted); }
+.tick b { color: var(--ink); font-weight: 600; }
+
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: var(--radius-sm);
+  padding: 7px 12px; cursor: pointer; font-weight: 500; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--signal); border-color: var(--signal); color: var(--on-signal); }
+.btn.attack { border-color: color-mix(in srgb, var(--attacker) 45%, var(--line)); color: var(--attacker); }
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+
+main > * { min-width: 0; }
+main { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(320px, 1fr); gap: 20px; padding: 20px 24px 40px; }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 16px 18px; }
+section h2 { margin: 0 0 10px; font-size: 16px; font-weight: 600; }
+section h2 small { font-weight: 400; color: var(--muted); font-size: 13px; margin-left: 6px; }
+.col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+
+/* ---------- map: the one bold element ---------- */
+.map-wrap { padding: 0; overflow: hidden; }
+.map-head { display: flex; justify-content: space-between; align-items: baseline; padding: 14px 18px 0; gap: 12px; flex-wrap: wrap; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+svg.map { display: block; width: 100%; height: auto; }
+.node-label { font-size: 1.55px; font-weight: 600; fill: var(--ink); paint-order: stroke; stroke: var(--floor); stroke-width: .45px; stroke-linejoin: round; }
+.node-sub { font-size: 1.3px; fill: var(--muted); }
+@media (prefers-reduced-motion: no-preference) { .contact { animation: pulse 1s ease-out; } }
+@keyframes pulse { from { stroke-opacity: 1; } to { stroke-opacity: .35; } }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 10px; }
+.stat { border-left: 3px solid var(--line); padding: 2px 0 2px 10px; }
+.stat b { display: block; font-size: 22px; font-weight: 600; line-height: 1.2; }
+.stat span { color: var(--muted); font-size: 13px; }
+.stat.good { border-color: var(--coverage); } .stat.bad { border-color: var(--reject); } .stat.sig { border-color: var(--signal); }
+
+.log { max-height: 280px; overflow: auto; margin: 0; padding: 0; list-style: none; font-size: 13.5px; }
+.log li { display: grid; grid-template-columns: 52px 10px 1fr; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+.log li:last-child { border-bottom: 0; }
+.log .t { color: var(--muted); text-align: right; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; }
+.k-settled .dot, .k-receipt .dot { background: var(--coverage); }
+.k-rejected .dot, .k-expired .dot { background: var(--reject); }
+.k-attack .dot { background: var(--attacker); }
+.k-relay .dot, .k-send .dot { background: var(--signal); }
+.k-retry .dot, .k-battery .dot { background: var(--pending); }
+
+/* ---------- phones ---------- */
+.phones { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.phone { border: 1px solid var(--line); border-radius: 26px; padding: 14px 12px 16px; background: var(--floor); min-width: 0; }
+.phone .notch { width: 54px; height: 5px; border-radius: 4px; background: var(--line); margin: 0 auto 12px; }
+.phone h3 { margin: 0 0 8px; font-size: 14px; font-weight: 600; }
+.phone label { display: block; font-size: 12.5px; color: var(--muted); margin: 8px 0 3px; }
+.phone select, .phone input { width: 100%; padding: 7px 8px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--panel); }
+.phone .btn { width: 100%; margin-top: 10px; }
+.money { margin: 10px 0 0; padding: 0; list-style: none; font-size: 13px; }
+.money li { display: flex; justify-content: space-between; padding: 3px 0; border-bottom: 1px dashed var(--line); }
+.money li:last-child { border: 0; }
+.money b { font-weight: 600; }
+.flag { color: var(--reject); font-weight: 600; font-size: 12.5px; margin-top: 6px; }
+.inbox { list-style: none; margin: 8px 0 0; padding: 0; max-height: 300px; overflow: auto; }
+.inbox li { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 9px; margin-bottom: 7px; font-size: 13px; }
+.inbox .amt { font-size: 17px; font-weight: 600; }
+.inbox .meta { color: var(--muted); font-size: 12px; }
+.chip { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.chip.PENDING, .chip.IN_MESH { background: color-mix(in srgb, var(--pending) 15%, transparent); color: var(--pending); }
+.chip.SETTLED { background: color-mix(in srgb, var(--coverage) 15%, transparent); color: var(--coverage); }
+.chip.REJECTED { background: color-mix(in srgb, var(--reject) 14%, transparent); color: var(--reject); }
+.chip.DUPLICATE { background: color-mix(in srgb, var(--signal) 14%, transparent); color: var(--signal); }
+.empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+.toast { min-height: 20px; font-size: 13px; color: var(--reject); margin-top: 6px; }
+
+.attacks { display: grid; gap: 8px; }
+.attacks .row { display: grid; grid-template-columns: 120px 1fr; gap: 10px; align-items: center; font-size: 13.5px; }
+.attacks .row p { margin: 0; color: var(--muted); }
+
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th { text-align: left; font-weight: 500; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+.table-scroll { overflow-x: auto; }
+.full { grid-column: 1 / -1; }
+
+@media (max-width: 1000px) {
+  main { grid-template-columns: 1fr; padding: 16px; }
+  header { padding: 16px; }
+  .controls { margin-left: 0; }
+}
+@media (max-width: 520px) {
+  .phones { grid-template-columns: 1fr; }
+  .attacks .row { grid-template-columns: 1fr; }
+}
+</style>
 </head>
 <body>
-<div class="container">
-    <h1>📡 UPI Offline Mesh — Live Demo</h1>
-    <p class="small">
-        Send money in a basement with zero internet. Encrypted packets gossip from phone to phone
-        until one with 4G reaches the backend.
-    </p>
+<header>
+  <div>
+    <h1>MeshPay simulator</h1>
+    <p>Eleven phones in a basement with no signal. Payments hop phone to phone until someone walks into 4G on the right.</p>
+  </div>
+  <div class="controls">
+    <span class="tick">Tick <b id="tick">0</b></span>
+    <button class="btn primary" id="run" aria-pressed="false">Run</button>
+    <button class="btn" id="step">Step</button>
+    <button class="btn" id="ff">+50 ticks</button>
+    <label class="tick" for="speed">Speed</label>
+    <select id="speed" class="btn" aria-label="Simulation speed">
+      <option value="600">Slow</option><option value="250" selected>Normal</option><option value="80">Fast</option>
+    </select>
+    <button class="btn" id="reset">Reset mesh</button>
+  </div>
+</header>
 
-    <div class="controls">
-        <h3 style="margin-top:0">🎬 Demo Flow</h3>
-
-        <div>
-            <span class="step-num">1</span><strong>Compose payment</strong> (simulates sender phone)
-            <br>
-            <select id="senderVpa">
-                <option>alice@demo</option>
-                <option>bob@demo</option>
-                <option>carol@demo</option>
-            </select>
-            →
-            <select id="receiverVpa">
-                <option>bob@demo</option>
-                <option>carol@demo</option>
-                <option>alice@demo</option>
-                <option>dave@demo</option>
-            </select>
-            ₹<input type="number" id="amount" value="500" style="width: 100px">
-            PIN <input type="text" id="pin" value="1234" style="width: 80px" maxlength="4">
-            <button onclick="sendPacket()">📤 Inject into Mesh</button>
+<main>
+  <div class="col">
+    <section class="map-wrap">
+      <div class="map-head">
+        <h2>Basement floor <small>radio range shown around the selected phone</small></h2>
+        <div class="legend">
+          <span><i style="background:var(--ink)"></i>Demo user</span>
+          <span><i style="background:var(--panel);border:1.5px solid var(--muted)"></i>Stranger relay</span>
+          <span><i style="background:var(--attacker)"></i>Mallory (attacker)</span>
+          <span><i style="background:var(--signal)"></i>Packets carried</span>
+          <span><i style="background:var(--coverage)"></i>In 4G</span>
         </div>
+      </div>
+      <svg class="map" id="map" viewBox="-4 -4 108 68" role="img" aria-label="Map of phones and radio contacts"></svg>
+    </section>
 
-        <div style="margin-top: 16px">
-            <span class="step-num">2</span><strong>Gossip</strong> — packets hop device-to-device
-            <button class="secondary" onclick="gossip()">🔄 Run Gossip Round</button>
-        </div>
+    <section>
+      <h2>How the mesh is doing</h2>
+      <div class="stats" id="stats"></div>
+    </section>
 
-        <div style="margin-top: 16px">
-            <span class="step-num">3</span><strong>Bridge node walks outside, hits 4G</strong>
-            <button class="secondary" onclick="flushBridges()">📡 Bridges Upload to Backend</button>
-            <span class="small">(parallel — exercises idempotency)</span>
-        </div>
+    <section>
+      <h2>What just happened</h2>
+      <ul class="log" id="log" aria-live="polite"></ul>
+    </section>
+  </div>
 
-        <div style="margin-top: 16px">
-            <button class="danger" onclick="resetMesh()">🗑 Reset Mesh + Cache</button>
+  <div class="col">
+    <section>
+      <h2>Phones</h2>
+      <div class="phones">
+        <div class="phone" aria-label="Sender phone">
+          <div class="notch"></div>
+          <h3>Pay offline</h3>
+          <label for="from">You are</label>
+          <select id="from"></select>
+          <label for="to">Pay</label>
+          <select id="to"></select>
+          <label for="amount">Amount (₹)</label>
+          <input id="amount" type="number" min="1" step="0.01" value="120">
+          <button class="btn primary" id="pay">Pay offline</button>
+          <button class="btn" id="walk">Walk to 4G</button>
+          <div class="toast" id="payMsg" role="status"></div>
+          <ul class="money" id="senderMoney"></ul>
+          <div class="flag" id="senderFlag"></div>
         </div>
+        <div class="phone" aria-label="Receiver phone">
+          <div class="notch"></div>
+          <h3>Received</h3>
+          <label for="me">Whose phone</label>
+          <select id="me"></select>
+          <ul class="inbox" id="inbox"></ul>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Try to break it</h2>
+      <div class="attacks">
+        <div class="row"><button class="btn attack" data-attack="tamper">Tamper</button><p>Mallory flips one bit in a packet she relays.</p></div>
+        <div class="row"><button class="btn attack" data-attack="forge">Forge sender</button><p>Mallory sends ₹200 "from Alice" without Alice's key.</p></div>
+        <div class="row"><button class="btn attack" data-attack="replay">Replay</button><p>Mallory re-sends a payment that already settled.</p></div>
+        <div class="row"><button class="btn attack" data-attack="clone">Clone wallet</button><p>A copy of Alice's wallet spends the same counter twice.</p></div>
+        <div class="row"><button class="btn attack" data-attack="overspend">Overspend</button><p>A modified app signs more than Alice's offline reserve.</p></div>
+      </div>
+      <div class="toast" id="attackMsg" role="status"></div>
+    </section>
+  </div>
+
+  <section class="full">
+    <h2>Payments and attacks <small>what was expected, what the server decided, and when the receiver's phone found out</small></h2>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>What</th><th>From → to</th><th>Amount</th><th>Checked offline</th><th>Server</th><th>Receiver knew</th><th>Expected</th></tr></thead>
+        <tbody id="payments"></tbody>
+      </table>
     </div>
-
-    <div class="grid grid-2">
-        <div class="card">
-            <h2>📱 Mesh Devices</h2>
-            <div id="devices"></div>
-        </div>
-
-        <div class="card">
-            <h2>🏦 Account Balances</h2>
-            <table id="accounts-table">
-                <thead><tr><th>VPA</th><th>Holder</th><th>Balance</th></tr></thead>
-                <tbody></tbody>
-            </table>
-            <p class="small" id="cacheInfo"></p>
-        </div>
-    </div>
-
-    <div class="card" style="margin-top: 16px">
-        <h2>📜 Transaction Ledger</h2>
-        <table id="tx-table">
-            <thead><tr>
-                <th>ID</th><th>From</th><th>To</th><th>Amount</th>
-                <th>Status</th><th>Bridge</th><th>Hops</th><th>Settled</th>
-            </tr></thead>
-            <tbody></tbody>
-        </table>
-    </div>
-
-    <div class="card" style="margin-top: 16px">
-        <h2>🪵 Activity Log</h2>
-        <div id="log"></div>
-    </div>
-</div>
+  </section>
+</main>
 
 <script>
-function log(msg) {
-    const el = document.getElementById('log');
-    el.textContent = '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n' + el.textContent;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const rupees = (v) => '₹' + Number(v).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const short = (vpa) => (vpa || '').split('@')[0].replace(/^./, c => c.toUpperCase());
+let state = null, timer = null, selected = 'alice', busy = false;
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, {headers: {'Content-Type': 'application/json'}, ...opts});
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(body.message || ('Request failed (' + r.status + ')'));
+  return body;
 }
 
-async function refresh() {
-    // Mesh state
-    const m = await fetch('/api/mesh/state').then(r => r.json());
-    const devicesDiv = document.getElementById('devices');
-    devicesDiv.innerHTML = m.devices.map(d => `
-        <div class="device ${d.hasInternet ? 'bridge' : 'offline'}">
-            <strong>${d.deviceId}</strong>
-            <span class="badge ${d.hasInternet ? 'badge-online' : 'badge-offline'}">
-                ${d.hasInternet ? '🌐 4G' : '🚫 OFFLINE'}
-            </span>
-            <span class="small">holding ${d.packetCount} packet(s)</span>
-            <div>${d.packetIds.map(id => `<span class="packet-id">${id}</span>`).join('')}</div>
-        </div>
-    `).join('');
-    document.getElementById('cacheInfo').textContent =
-        `Idempotency cache size: ${m.idempotencyCacheSize}`;
+// ---------------------------------------------------------------- map
+function drawMap(s) {
+  const c = s.config, svg = $('map');
+  const byId = Object.fromEntries(s.nodes.map(n => [n.id, n]));
+  let out = `
+    <defs>
+      <pattern id="grid" width="5" height="5" patternUnits="userSpaceOnUse">
+        <path d="M5 0H0V5" fill="none" stroke="var(--line)" stroke-width=".12"/></pattern>
+      <pattern id="hatch" width="2" height="2" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <line x1="0" y1="0" x2="0" y2="2" stroke="var(--coverage)" stroke-width=".25" stroke-opacity=".45"/></pattern>
+    </defs>
+    <rect x="-4" y="-4" width="${c.width + 8}" height="${c.height + 8}" fill="var(--floor)"/>
+    <rect x="-4" y="-4" width="${c.width + 8}" height="${c.height + 8}" fill="url(#grid)"/>
+    <rect x="${c.coverageX}" y="-4" width="${c.width - c.coverageX + 4}" height="${c.height + 8}" fill="var(--coverage-soft)"/>
+    <rect x="${c.coverageX}" y="-4" width="${c.width - c.coverageX + 4}" height="${c.height + 8}" fill="url(#hatch)"/>
+    <line x1="${c.coverageX}" x2="${c.coverageX}" y1="-4" y2="${c.height + 4}" stroke="var(--coverage)" stroke-width=".3" stroke-dasharray="1 .8"/>
+    <text x="${(c.coverageX + c.width + 4) / 2}" y="${c.height + 1.2}" text-anchor="middle" class="node-label" style="fill:var(--coverage)">4G signal</text>
+    <text x="${(c.coverageX + c.width + 4) / 2}" y="${c.height + 2.9}" text-anchor="middle" class="node-sub">upload and charge here</text>`;
 
-    // Accounts
-    const accs = await fetch('/api/accounts').then(r => r.json());
-    document.querySelector('#accounts-table tbody').innerHTML = accs.map(a => `
-        <tr><td>${a.vpa}</td><td>${a.holderName}</td>
-            <td class="balance">₹${parseFloat(a.balance).toFixed(2)}</td></tr>
-    `).join('');
+  const sel = byId[selected];
+  if (sel) out += `<circle cx="${sel.x}" cy="${sel.y}" r="${c.radioRange}" fill="var(--signal)" fill-opacity=".05" stroke="var(--signal)" stroke-opacity=".4" stroke-width=".18" stroke-dasharray=".8 .6"/>`;
 
-    // Transactions
-    const txs = await fetch('/api/transactions').then(r => r.json());
-    document.querySelector('#tx-table tbody').innerHTML = txs.map(t => `
-        <tr>
-            <td>${t.id}</td><td>${t.senderVpa}</td><td>${t.receiverVpa}</td>
-            <td class="balance">₹${parseFloat(t.amount).toFixed(2)}</td>
-            <td class="status-${t.status}">${t.status}</td>
-            <td>${t.bridgeNodeId}</td><td>${t.hopCount}</td>
-            <td class="small">${new Date(t.settledAt).toLocaleTimeString()}</td>
-        </tr>
-    `).join('');
-}
+  for (const k of s.contacts) {
+    const a = byId[k.a], b = byId[k.b];
+    out += `<line class="contact" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="var(--signal)" stroke-width=".35" stroke-opacity=".6"/>`;
+  }
 
-async function sendPacket() {
-    const body = {
-        senderVpa: document.getElementById('senderVpa').value,
-        receiverVpa: document.getElementById('receiverVpa').value,
-        amount: parseFloat(document.getElementById('amount').value),
-        pin: document.getElementById('pin').value,
-        ttl: 5,
-        startDevice: 'phone-alice'
-    };
-    const r = await fetch('/api/demo/send', {
-        method: 'POST', headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(body)
-    }).then(r => r.json());
-    log(`📤 Packet ${r.packetId.substring(0,8)} encrypted & injected at ${r.injectedAt} (TTL ${r.ttl})`);
-    log(`   ciphertext (truncated): ${r.ciphertextPreview}`);
-    refresh();
-}
-
-async function gossip() {
-    const r = await fetch('/api/mesh/gossip', {method: 'POST'}).then(r => r.json());
-    log(`🔄 Gossip: ${r.transfers} transfer(s) — ${JSON.stringify(r.deviceCounts)}`);
-    refresh();
-}
-
-async function flushBridges() {
-    const r = await fetch('/api/mesh/flush', {method: 'POST'}).then(r => r.json());
-    log(`📡 ${r.uploadsAttempted} bridge upload(s):`);
-    r.results.forEach(res => {
-        log(`   ${res.bridgeNode} packet ${res.packetId} → ${res.outcome}` +
-            (res.reason ? ` (${res.reason})` : ''));
+  for (const n of s.nodes) {
+    const r = n.owner ? 1.7 : 1.25;
+    const fill = n.malicious ? 'var(--attacker)' : n.owner ? 'var(--ink)' : 'var(--panel)';
+    const stroke = n.online ? 'var(--coverage)' : n.malicious ? 'var(--attacker)' : n.owner ? 'var(--ink)' : 'var(--muted)';
+    const dim = n.radioOn ? 1 : .45;
+    out += `<g opacity="${dim}" style="cursor:pointer" data-node="${esc(n.id)}" tabindex="0" role="button" aria-label="${esc(n.label)}, battery ${n.battery}%, carrying ${n.carrying}">`;
+    if (n.online) out += `<circle cx="${n.x}" cy="${n.y}" r="${r + 1}" fill="none" stroke="var(--coverage)" stroke-width=".3"/>`;
+    out += `<circle cx="${n.x}" cy="${n.y}" r="${r}" fill="${fill}" stroke="${stroke}" stroke-width=".4" ${n.radioOn ? '' : 'stroke-dasharray=".5 .4"'}/>`;
+    if (n.owner) out += `<text x="${n.x}" y="${n.y + .58}" text-anchor="middle" style="font-size:1.6px;font-weight:700;fill:var(--panel)">${esc(n.label[0])}</text>`;
+    // packets carried, as small squares stacked to the right
+    n.packets.slice(0, 8).forEach((p, i) => {
+      out += `<rect x="${n.x + r + .45 + (i % 4) * .95}" y="${n.y - 1.3 + Math.floor(i / 4) * .95}" width=".75" height=".75" rx=".12" fill="${p.own ? 'var(--ink)' : 'var(--signal)'}"/>`;
     });
-    refresh();
+    // battery bar
+    const bw = 3, bx = n.x - bw / 2, by = n.y + r + .7;
+    const bc = n.battery > 20 ? 'var(--coverage)' : n.battery > 4 ? 'var(--pending)' : 'var(--reject)';
+    out += `<rect x="${bx}" y="${by}" width="${bw}" height=".55" rx=".2" fill="var(--line)"/>
+            <rect x="${bx}" y="${by}" width="${bw * n.battery / 100}" height=".55" rx=".2" fill="${bc}"/>`;
+    out += `<text x="${n.x}" y="${by + 2.1}" text-anchor="middle" class="node-label">${esc(n.label)}</text></g>`;
+  }
+  svg.innerHTML = out;
+  svg.querySelectorAll('[data-node]').forEach(g => {
+    const pick = () => { selected = g.dataset.node; drawMap(state); };
+    g.addEventListener('click', pick);
+    g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+  });
 }
 
-async function resetMesh() {
-    await fetch('/api/mesh/reset', {method: 'POST'});
-    log('🗑 mesh + idempotency cache cleared');
-    refresh();
+// ---------------------------------------------------------------- panels
+function drawStats(s) {
+  const t = s.stats;
+  const items = [
+    ['Payments signed', t.created, 'sig'],
+    ['Settled', t.settled, 'good'],
+    ['Rejected', t.rejected, 'bad'],
+    ['Avg delivery', t.avgLatencyTicks + ' ticks', ''],
+    ['Avg hops', t.avgHops, ''],
+    ['Duplicate uploads', t.duplicateRate + '%', ''],
+    ['Relay transfers', t.transfers, 'sig'],
+    ['Dropped after receipt', t.purgedByReceipt, 'good'],
+    ['Expired in mesh', t.expired, ''],
+  ];
+  $('stats').innerHTML = items.map(([l, v, cls]) => `<div class="stat ${cls}"><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join('');
 }
+
+function drawLog(s) {
+  $('log').innerHTML = s.events.map(e =>
+    `<li class="k-${esc(e.kind)}"><span class="t">t${e.tick}</span><span class="dot"></span><span>${esc(e.text)}</span></li>`).join('')
+    || '<li><span></span><span></span><span class="empty">Nothing yet. Press Pay offline, then Run.</span></li>';
+}
+
+function fillSelect(el, people, keep) {
+  const prev = el.value || keep;
+  el.innerHTML = people.map(p => `<option value="${esc(p.vpa)}">${esc(p.name)}</option>`).join('');
+  if (prev && people.some(p => p.vpa === prev)) el.value = prev;
+}
+
+function drawPhones(s) {
+  if (!$('from').options.length) {
+    fillSelect($('from'), s.people, 'alice@demo');
+    fillSelect($('to'), s.people, 'bob@demo'); $('to').value = 'bob@demo';
+    fillSelect($('me'), s.people, 'bob@demo'); $('me').value = 'bob@demo';
+  }
+  const me = s.people.find(p => p.vpa === $('from').value);
+  if (me) {
+    $('senderMoney').innerHTML = `
+      <li><span>Offline balance on phone</span><b>${rupees(me.offlineOnPhone)}</b></li>
+      <li><span>Reserved on server</span><b>${rupees(me.reserveOnServer)}</b></li>
+      <li><span>Main bank balance</span><b>${rupees(me.mainBalance)}</b></li>
+      <li><span>Per-payment cap</span><b>${rupees(me.perTxnCap)}</b></li>`;
+    $('senderFlag').textContent = me.deviceStatus === 'FLAGGED'
+      ? 'Device flagged: the server saw two payments with one counter (cloned wallet).' : '';
+  }
+  const who = $('me').value;
+  const incoming = s.payments.filter(p => p.to === who && !p.kind.startsWith('Replay') && !p.kind.startsWith('Tampered'));
+  $('inbox').innerHTML = incoming.map(p => {
+    const known = p.receiverKnewTick != null;
+    const status = known ? p.receiverStatus : 'PENDING';
+    const note = known ? `Receipt reached this phone at t${p.receiverKnewTick}`
+      : (p.iouCheck === 'valid' ? 'Signature and wallet checked offline' : 'Offline check ' + p.iouCheck);
+    return `<li><div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="amt">${rupees(p.amount)}</span><span class="chip ${status}">${status === 'PENDING' ? 'Pending' : status[0] + status.slice(1).toLowerCase()}</span></div>
+      <div>from ${esc(short(p.from))}</div><div class="meta">${esc(note)}</div></li>`;
+  }).join('') || `<li class="empty" style="border:0;background:none">Nothing received yet.</li>`;
+}
+
+function drawPayments(s) {
+  $('payments').innerHTML = s.payments.map(p => {
+    const server = p.serverTick != null
+      ? `<span class="chip ${esc(p.serverStatus)}">${esc(p.serverStatus.toLowerCase())}</span> ${p.reason ? '<span class="mono">' + esc(p.reason) + '</span>' : ''} <span class="meta">t${p.serverTick}</span>`
+      : `<span class="chip IN_MESH">in mesh</span>`;
+    const knew = p.receiverKnewTick != null ? `t${p.receiverKnewTick}` : '<span style="color:var(--muted)">not yet</span>';
+    return `<tr><td>${esc(p.kind)}</td><td>${esc(short(p.from))} → ${esc(short(p.to))}</td><td>${rupees(p.amount)}</td>
+      <td>${esc(p.iouCheck)}</td><td>${server}</td><td>${knew}</td><td style="color:var(--muted)">${esc(p.expected || 'settles')}</td></tr>`;
+  }).join('') || `<tr><td colspan="7" class="empty">No payments yet. Use the phone on the right to pay someone offline.</td></tr>`;
+}
+
+function render(s) {
+  state = s;
+  $('tick').textContent = s.tick;
+  drawMap(s); drawStats(s); drawLog(s); drawPhones(s); drawPayments(s);
+}
+
+// ---------------------------------------------------------------- actions
+async function refresh() { render(await api('/api/sim/state')); }
+async function step(n) {
+  if (busy) return; busy = true;
+  try { render(await api('/api/sim/step?n=' + n, {method: 'POST'})); } finally { busy = false; }
+}
+function setRunning(on) {
+  clearInterval(timer); timer = null;
+  $('run').textContent = on ? 'Pause' : 'Run';
+  $('run').setAttribute('aria-pressed', on);
+  if (on) timer = setInterval(() => step(1), Number($('speed').value));
+}
+
+$('run').onclick = () => setRunning(!timer);
+$('speed').onchange = () => { if (timer) setRunning(true); };
+$('step').onclick = () => step(1);
+$('ff').onclick = () => step(50);
+$('reset').onclick = async () => { setRunning(false); render(await api('/api/sim/reset', {method: 'POST'})); };
+$('from').onchange = () => { selected = $('from').value.split('@')[0]; render(state); };
+$('me').onchange = () => render(state);
+
+$('pay').onclick = async () => {
+  $('payMsg').textContent = '';
+  const from = $('from').value, to = $('to').value;
+  if (from === to) { $('payMsg').textContent = 'Pick someone other than yourself.'; return; }
+  try {
+    await api('/api/sim/pay', {method: 'POST', body: JSON.stringify({from, to, amount: Number($('amount').value)})});
+    $('me').value = to; selected = from.split('@')[0];
+    await refresh();
+  } catch (e) { $('payMsg').textContent = e.message; }
+};
+$('walk').onclick = async () => {
+  const id = $('from').value.split('@')[0];
+  await api('/api/sim/nodes/' + id + '/walk-to-coverage', {method: 'POST'});
+  selected = id; await refresh();
+};
+document.querySelectorAll('[data-attack]').forEach(b => b.onclick = async () => {
+  $('attackMsg').textContent = '';
+  try {
+    await api('/api/sim/attack/' + b.dataset.attack, {method: 'POST'});
+    await refresh();
+    if (!timer) setRunning(true);
+  } catch (e) { $('attackMsg').textContent = e.message; }
+});
 
 refresh();
-setInterval(refresh, 3000);
+setInterval(() => { if (!timer) refresh().catch(() => {}); }, 3000);
 </script>
 </body>
 </html>
