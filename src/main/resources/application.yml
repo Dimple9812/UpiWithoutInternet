@@ -1,0 +1,65 @@
+server:
+  port: 8080
+  error:
+    include-stacktrace: never
+    include-message: never
+
+spring:
+  application:
+    name: meshpay
+  datasource:
+    url: ${MESHPAY_DB_URL:jdbc:postgresql://localhost:5432/meshpay}
+    username: ${MESHPAY_DB_USER:meshpay}
+    password: ${MESHPAY_DB_PASSWORD:meshpay}
+    hikari:
+      # A settlement that cannot get its row locks fails fast (SQLSTATE 55P03 ->
+      # CannotAcquireLockException) and is reported to the bridge as RETRY.
+      connection-init-sql: "SET lock_timeout = '3s'"
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate          # Flyway owns the schema
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+  data:
+    redis:
+      host: ${MESHPAY_REDIS_HOST:localhost}
+      port: ${MESHPAY_REDIS_PORT:6379}
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+meshpay:
+  packet-max-age: 72h
+  clock-skew: 5m
+  idempotency:
+    store: redis
+    processing-lease: 60s
+    final-state-ttl: 10d
+  wallet:
+    max-limit: 2000.00
+    max-per-txn: 500.00
+    validity: 7d
+  bridge:
+    rate-limit-capacity: 120
+    rate-limit-refill-per-second: 20
+    # tokens: provide via environment, e.g. MESHPAY_BRIDGE_TOKENS_BRIDGE1=<long random token>
+  keys:
+    master-key: ${MESHPAY_MASTER_KEY:}
+    rsa-bits: 2048
+    retired-key-grace: 8d
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  level:
+    com.demo.upimesh: INFO

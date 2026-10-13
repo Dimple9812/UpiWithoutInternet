@@ -1,0 +1,12 @@
+# Demo profile: dashboard + simulator endpoints + seeded accounts (PIN 1234).
+# NEVER enable in production. The master key below is public and for local use only.
+meshpay:
+  keys:
+    master-key: ${MESHPAY_MASTER_KEY:ZGVtby1vbmx5LWRvLW5vdC11c2UtaW4tcHJvZC0xMjM=}
+  bridge:
+    tokens:
+      demo-bridge: ${MESHPAY_DEMO_BRIDGE_TOKEN:demo-bridge-token-not-secret}
+
+logging:
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level %logger{30} - %msg %kvp%n"
