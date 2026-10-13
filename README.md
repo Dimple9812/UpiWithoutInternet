@@ -7,8 +7,9 @@ no real bank or NPCI integration — but the protocol is built so a reviewer can
 steal money, double-spend, or replay a payment.
 
 > **Status:** Phase 1 (backend protocol + tests) and Phase 2 (mesh simulator
-> dashboard) are done. Next: Phase 3 Android app, Phase 4 full docs (diagram,
-> threat model, one-command compose).
+> website) are done, and the site is ready to deploy for free: see
+> [DEPLOY.md](DEPLOY.md). There is no mobile app: a browser can't relay over
+> Bluetooth, so the website runs the mesh as a simulation on top of the real backend.
 
 ## How it works
 

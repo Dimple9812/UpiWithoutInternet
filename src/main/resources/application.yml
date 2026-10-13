@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: ${PORT:8080}            # hosting platforms inject PORT
   error:
     include-stacktrace: never
     include-message: never
