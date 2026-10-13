@@ -1,0 +1,25 @@
+# Single-instance hosting on a free tier (e.g. Render + Neon), used together with
+# the demo profile:  SPRING_PROFILES_ACTIVE=demo,cloud
+#
+# - No Redis: idempotency uses the in-memory store. That is safe for ONE instance,
+#   and the PostgreSQL unique constraints remain the backstop against double
+#   settlement either way. Run Redis again before scaling to several instances.
+# - Small connection pool to stay inside free-tier database connection limits.
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+  datasource:
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+
+meshpay:
+  idempotency:
+    store: memory
+
+management:
+  health:
+    redis:
+      enabled: false
